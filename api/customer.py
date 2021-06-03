@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 import json
 from data_type import *
-from api.__util import generate_error, pre_process, parse_sqlerror
+from api.__util import generate_error, pre_process, parse_sqlerror, generate_success
 from sqlalchemy.exc import IntegrityError
 from typing import List
 
@@ -55,10 +55,7 @@ def add_customer():
         except Exception:
             return generate_error(-1, '未知错误')
         return generate_error(400, '插入失败', str(parse_sqlerror(e)))
-    return jsonify({
-        'success': True,
-        'msg': ''
-    })
+    return generate_success()
 
 
 @cs_bp.route('/update', methods=['POST'])
@@ -88,10 +85,7 @@ def modify_customer():
     database.session.begin()
     database.session.add(customer)
     database.session.commit()
-    return jsonify({
-        'success': True,
-        'msg': ''
-    })
+    return generate_success()
 
 
 @cs_bp.route('/delete', methods=['POST'])
@@ -126,10 +120,7 @@ def delete_customer():
         except Exception:
             return generate_error(-1, '未知错误')
         return generate_error(400, '删除失败', str(parse_sqlerror(e)))
-    return jsonify({
-        'success': True,
-        'msg': ''
-    })
+    return generate_success()
 
 
 @cs_bp.route('/query', methods=['POST'])
@@ -181,8 +172,4 @@ def query_customer():
             s_data = Customer.query.filter(Customer.name.like(search_info.keyword)).all()
         elif search_info.mode == 2:
             s_data = Customer.query.filter(Customer.phone.like(search_info.keyword)).all()
-    return jsonify({
-        'success': True,
-        'msg': '',
-        'data': [it.to_dict() for it in s_data]
-    })
+    return generate_success([it.to_dict() for it in s_data])

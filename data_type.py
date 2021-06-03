@@ -1,5 +1,6 @@
 from ext import database
 from typing import Optional, Union, List
+import uuid
 import datetime
 
 
@@ -9,10 +10,12 @@ class AccountType:
 
 
 class SearchMethod:
-    ACCOUNT_ID = 0      # 以账户ID搜索
-    BRANCH_NAME = 1     # 以开卡支行搜索
-    ACCOUNT_TYPE = 2    # 以账户类型搜索
-    CUSTOMER_ID = 3     # 以持有卡的客户的ID搜索
+    ACCOUNT_ID = 0  # 以账户ID搜索
+    BRANCH_NAME = 1  # 以开卡支行搜索
+    ACCOUNT_TYPE = 2  # 以账户类型搜索
+    CUSTOMER_ID = 3  # 以持有卡的客户的ID搜索/持有贷款的客户
+
+    LOAN_ID = 0     # 贷款ID
 
 
 class User(database.Model):
@@ -139,7 +142,7 @@ class CheckingAccount(database.Model):
 
     __tablename__ = 'checking_account'
     account_id = database.Column(database.CHAR(length=19), database.ForeignKey(Account.account_id), primary_key=True)
-    overdraft = database.Column(database.DECIMAL(20, 2), nullable=False)   # 透支额度
+    overdraft = database.Column(database.DECIMAL(20, 2), nullable=False)  # 透支额度
 
 
 class LoanRecord(database.Model):
@@ -149,6 +152,12 @@ class LoanRecord(database.Model):
     total_fund = database.Column(database.DECIMAL(20, 2), nullable=False)
     date = database.Column(database.DATE, nullable=False)
 
+    def __init__(self, subbranch, total_fund):
+        self.loan_id = str(uuid.uuid4())[:18]
+        self.subbranch = subbranch
+        self.total_fund = total_fund
+        self.date = datetime.datetime.now()
+
 
 class PaidRecord(database.Model):
     __tablename__ = 'paid_record'
@@ -157,11 +166,20 @@ class PaidRecord(database.Model):
     date = database.Column(database.DATE, nullable=False)
     loan_id = database.Column(database.CHAR(18), database.ForeignKey(LoanRecord.loan_id), nullable=False)
 
+    def __init__(self, loan_id, fund):
+        self.loan_id = loan_id
+        self.fund = fund
+        self.date = datetime.datetime.now()
 
-class RelationLoanAcc(database.Model):
-    __tablename__ = 'relation_loan_acc'
-    account_id = database.Column(database.CHAR(length=19), database.ForeignKey(Account.account_id), primary_key=True)
+
+class RelationLoanUsr(database.Model):
+    __tablename__ = 'relation_loan_usr'
+    user_id = database.Column(database.CHAR(length=19), database.ForeignKey(Customer.user_id), primary_key=True)
     loan_id = database.Column(database.CHAR(18), database.ForeignKey(LoanRecord.loan_id), primary_key=True)
+
+    def __init__(self, user_id, loan_id):
+        self.user_id = user_id
+        self.loan_id = loan_id
 
 
 class RelationAccountCustomerBranch(database.Model):

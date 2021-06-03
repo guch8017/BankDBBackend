@@ -31,6 +31,19 @@ class SQLErr:
 class ErrCode:
     NO_LOGIN = 403
 
+    PARAM_LOST = 500
+    PARAM_TYPE_MISMATCH = 501
+
+    USER_LIST_EMPTY = 605
+
+    SQL_UNKNOWN_ERROR = 300
+    SQL_REFERENCE_ERROR = 301
+    SQL_DUPLICATE_ERROR = 302
+
+    LOAN_NO_EXIST = 210
+    LOAN_TOO_MUCH = 211
+    LOAN_STILL_PAYING = 212
+
 
 def generate_error(code: int, message: str, sql_error: Optional[str] = None):
     data = {
