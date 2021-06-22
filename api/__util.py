@@ -33,6 +33,7 @@ class ErrCode:
 
     PARAM_LOST = 500
     PARAM_TYPE_MISMATCH = 501
+    UNKNOWN_ACC_TYPE = 502
 
     USER_LIST_EMPTY = 605
 

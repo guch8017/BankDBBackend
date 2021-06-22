@@ -32,6 +32,13 @@ class SubBranch(database.Model):
     city = database.Column(database.VARCHAR(length=10))
     fund = database.Column(database.DECIMAL(20, 2))
 
+    def to_dict(self):
+        return {
+            'name': self.name,
+            'city': self.city,
+            'fund': float(self.fund)
+        }
+
 
 class Department(database.Model):
     __tablename__ = 'department'
@@ -65,6 +72,8 @@ class BankManager(database.Model):
 
 class Customer(database.Model):
     def __init__(self, js: Optional[dict] = None):
+        t = datetime.datetime.now()
+        self.create_time = str(t.year).zfill(4) + str(t.month).zfill(2)
         if js:
             self.update(js)
 
@@ -99,7 +108,7 @@ class Customer(database.Model):
     s_phone = database.Column(database.CHAR(length=20))
     s_email = database.Column(database.CHAR(length=40))
     s_relation = database.Column(database.VARCHAR(length=10))
-    employee_id = database.Column(database.CHAR(length=18), database.ForeignKey(Employee.user_id), nullable=True)
+    create_time = database.Column(database.CHAR(length=6), nullable=False)
 
 
 class Account(database.Model):
@@ -124,10 +133,10 @@ class Account(database.Model):
 
 
 class SavingAccount(database.Model):
-    def __init__(self, account_id):
+    def __init__(self, account_id, rate, finance):
         self.account_id = account_id
-        self.rate = 0
-        self.finance = 0
+        self.rate = rate
+        self.finance = finance
 
     __tablename__ = 'saving_account'
     account_id = database.Column(database.CHAR(length=19), database.ForeignKey(Account.account_id), primary_key=True)
@@ -136,9 +145,9 @@ class SavingAccount(database.Model):
 
 
 class CheckingAccount(database.Model):
-    def __init__(self, account_id):
+    def __init__(self, account_id, overdraft):
         self.account_id = account_id
-        self.overdraft = 0
+        self.overdraft = overdraft
 
     __tablename__ = 'checking_account'
     account_id = database.Column(database.CHAR(length=19), database.ForeignKey(Account.account_id), primary_key=True)
@@ -190,7 +199,8 @@ class RelationAccountCustomerBranch(database.Model):
         self.branch = branch_name
 
     __tablename__ = 'relation_a_c_b'
-    account_id = database.Column(database.CHAR(length=19), primary_key=True)
+    id = database.Column(database.INTEGER, primary_key=True)
+    account_id = database.Column(database.CHAR(length=19), primary_key=False, index=True, unique=False)
     customer_id = database.Column(database.CHAR(18), database.ForeignKey(Customer.user_id), nullable=False)
     type = database.Column(database.INTEGER, nullable=False)
     branch = database.Column(database.VARCHAR(length=10), database.ForeignKey(SubBranch.name), nullable=False)

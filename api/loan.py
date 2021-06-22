@@ -3,8 +3,6 @@
 """
 from flask import Blueprint, request, jsonify
 from sqlalchemy.exc import IntegrityError
-from random import randint
-from threading import Lock
 from data_type import *
 from ext import database
 from api.__util import generate_error, pre_process, parse_sqlerror, ErrCode, generate_success
@@ -13,7 +11,39 @@ from math import isclose
 la_bp = Blueprint("Loan", "Loan", url_prefix='/loan')
 
 
-@la_bp.route('/add', methods=['POST'])
+def loan2json(loans: Union[List[LoanRecord], LoanRecord]):
+    def l2j(loan: LoanRecord):
+        users = []
+        paid = []
+        usr_list: List[RelationLoanUsr] = RelationLoanUsr.query.filter(RelationLoanUsr.loan_id == loan.loan_id).all()
+        for user in usr_list:
+            users.append(user.user_id)
+        paid_list: List[PaidRecord] = PaidRecord.query.filter(PaidRecord.loan_id == loan.loan_id).all()
+        for h in paid_list:
+            paid.append({
+                'id': h.id,
+                'date': h.date.strftime('%Y-%m-%d'),
+                'fund': float(h.fund)
+            })
+        return {
+            'loan_id': loan.loan_id,
+            'total': float(loan.total_fund),
+            'branch': loan.subbranch,
+            'create_date': loan.date.strftime('%Y-%m-%d'),
+            'customers': users,
+            'paid_history': paid
+        }
+
+    ret = []
+    if isinstance(loans, list):
+        for loan in loans:
+            ret.append(l2j(loan))
+        return ret
+    else:
+        return l2j(loans)
+
+
+@la_bp.route('/create', methods=['POST'])
 def create_loan():
     """
     添加一笔贷款信息
@@ -42,7 +72,7 @@ def create_loan():
         return generate_error(ErrCode.USER_LIST_EMPTY, "用户列表为空")
     # 添加信息
     record = LoanRecord(sub_branch, total_fund)
-    transaction = database.session.start()
+    transaction = database.session.begin()
     try:
         database.session.add(record)
         for user in user_ids:
@@ -51,7 +81,7 @@ def create_loan():
     except IntegrityError:
         transaction.rollback()
         return generate_error(ErrCode.SQL_REFERENCE_ERROR, "SQL插入异常，可能出现参照或重复错误")
-    return generate_success({'loan_id': record.loan_id})
+    return generate_success(loan2json(record))
 
 
 @la_bp.route('/pay', methods=['POST'])
@@ -80,7 +110,7 @@ def pay_loan():
     loan: LoanRecord = LoanRecord.query.filter(LoanRecord.loan_id == loan_id).first()
     if not loan:
         return generate_error(ErrCode.LOAN_NO_EXIST, "贷款记录不存在")
-    paid_loan = database.session.query(database.func.sum(PaidRecord.fund)).filter(PaidRecord.loan_id == loan_id).first()
+    paid_loan = database.session.query(database.func.coalesce(database.func.sum(PaidRecord.fund), 0)).filter(PaidRecord.loan_id == loan_id).first()
     if float(paid_loan[0]) + fund > float(loan.total_fund):
         return generate_error(ErrCode.LOAN_TOO_MUCH, "贷款付款超出最大值")
     # 插入支付信息
@@ -92,7 +122,7 @@ def pay_loan():
     except IntegrityError:
         transaction.rollback()
         return generate_error(ErrCode.SQL_UNKNOWN_ERROR, "插入数据失败(未知异常)")
-    return generate_success()
+    return generate_success(loan2json(loan))
 
 
 @la_bp.route('/delete', methods=['POST'])
@@ -117,7 +147,7 @@ def delete_loan():
     loan: LoanRecord = LoanRecord.query.filter(LoanRecord.loan_id == loan_id).first()
     if not loan:
         return generate_error(ErrCode.LOAN_NO_EXIST, "贷款记录不存在")
-    paid_loan = database.session.query(database.func.sum(PaidRecord.fund)).filter(PaidRecord.loan_id == loan_id).first()
+    paid_loan = database.session.query(database.func.coalesce(database.func.sum(PaidRecord.fund), 0)).filter(PaidRecord.loan_id == loan_id).first()
     if not isclose(float(paid_loan[0]), float(loan.total_fund), rel_tol=1e-03):
         return generate_error(ErrCode.LOAN_STILL_PAYING, "不允许删除未发放完成的贷款信息")
     # 删除相关信息
@@ -144,30 +174,7 @@ def query_loan():
     }
     :return:
     """
-    def loan2json(loans: List[LoanRecord]):
-        ret = []
-        for loan in loans:
-            users = []
-            paid = []
-            usr_list: List[RelationLoanUsr] = RelationLoanUsr.query.filter(RelationLoanUsr.loan_id == loan.loan_id).all()
-            for user in usr_list:
-                users.append(user.user_id)
-            paid_list: List[PaidRecord] = PaidRecord.query.filter(PaidRecord.loan_id == loan.loan_id).all()
-            for h in paid_list:
-                paid.append({
-                    'id': h.id,
-                    'date': h.date,
-                    'fund': float(h.fund)
-                })
-            ret.append({
-                'loan_id': loan.loan_id,
-                'total': float(loan.total_fund),
-                'branch': loan.subbranch,
-                'create_date': loan.date.strftime('yyyy-mm-dd'),
-                'customers': users,
-                'paid_history': paid
-            })
-        return ret
+
     data = pre_process()
     if not data.logged_in:
         return generate_error(403, data.login_message)
@@ -185,5 +192,12 @@ def query_loan():
     elif method == SearchMethod.BRANCH_NAME:
         result = LoanRecord.query.filter(LoanRecord.subbranch == keyword).all()
     elif method == SearchMethod.CUSTOMER_ID:
-        result = database.session.query(LoanRecord).filter(LoanRecord.loan_id.in_(database.session.query(RelationLoanUsr.loan_id).filter(RelationLoanUsr.user_id == keyword).all())).all()
+        result = database.session.query(LoanRecord).filter(LoanRecord.loan_id.in_(
+            database.session.query(RelationLoanUsr.loan_id).filter(RelationLoanUsr.user_id == keyword).all())).all()
     return generate_success(loan2json(result))
+
+
+@la_bp.route('/get_all', methods=['POST', 'GET'])
+def get_all():
+    loan: List[LoanRecord] = LoanRecord.query.all()
+    return generate_success(loan2json(loan))

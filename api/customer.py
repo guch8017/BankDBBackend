@@ -17,7 +17,7 @@ cs_bp = Blueprint('CustomerManagement', 'CustomerManagement', url_prefix='/custo
 """
 
 
-@cs_bp.route('/add', methods=['POST'])
+@cs_bp.route('/create', methods=['POST'])
 def add_customer():
     """
     新增客户
@@ -55,7 +55,7 @@ def add_customer():
         except Exception:
             return generate_error(-1, '未知错误')
         return generate_error(400, '插入失败', str(parse_sqlerror(e)))
-    return generate_success()
+    return generate_success(customer.to_dict())
 
 
 @cs_bp.route('/update', methods=['POST'])
@@ -85,7 +85,7 @@ def modify_customer():
     database.session.begin()
     database.session.add(customer)
     database.session.commit()
-    return generate_success()
+    return generate_success(customer.to_dict())
 
 
 @cs_bp.route('/delete', methods=['POST'])
@@ -172,4 +172,10 @@ def query_customer():
             s_data = Customer.query.filter(Customer.name.like(search_info.keyword)).all()
         elif search_info.mode == 2:
             s_data = Customer.query.filter(Customer.phone.like(search_info.keyword)).all()
+    return generate_success([it.to_dict() for it in s_data])
+
+
+@cs_bp.route('/get_all', methods=['GET', 'POST'])
+def get_customer_list():
+    s_data = Customer.query.all()
     return generate_success([it.to_dict() for it in s_data])

@@ -3,6 +3,9 @@ from ext import database
 from api.customer import cs_bp
 from api.account import ac_bp
 from api.manage import mg_bp
+from api.branch import sb_bp
+from api.loan import la_bp
+from api.stat import st_bp
 from flask_migrate import Migrate
 import config
 
@@ -13,6 +16,10 @@ migrate = Migrate(app=app, db=database)
 app.register_blueprint(cs_bp)
 app.register_blueprint(ac_bp)
 app.register_blueprint(mg_bp)
+app.register_blueprint(sb_bp)
+app.register_blueprint(la_bp)
+app.register_blueprint(st_bp)
+
 
 @app.route('/')
 def hello_world():
