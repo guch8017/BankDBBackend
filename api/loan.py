@@ -106,6 +106,8 @@ def pay_loan():
         return generate_error(ErrCode.PARAM_LOST, "缺少必要参数")
     if not (isinstance(fund, float) or isinstance(fund, int)) or fund < 0:
         return generate_error(ErrCode.PARAM_TYPE_MISMATCH, "参数类型异常")
+    if fund == 0:
+        return generate_error(ErrCode.PARAM_TYPE_MISMATCH, "发放金额应大于0")
     # 检查是否超出额度
     loan: LoanRecord = LoanRecord.query.filter(LoanRecord.loan_id == loan_id).first()
     if not loan:

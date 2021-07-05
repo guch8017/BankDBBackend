@@ -30,8 +30,7 @@ INSERT INTO bank.subbranch (name, city, fund) VALUES ('蒙城北路分理处', '
 INSERT INTO bank.subbranch (name, city, fund) VALUES ('阜阳北路支行', '合肥', 0.00);
 INSERT INTO bank.subbranch (name, city, fund) VALUES ('颐和花园分理处', '合肥', 0.00);
 INSERT INTO bank.subbranch (name, city, fund) VALUES ('高新开发区支行', '合肥', 0.00);
-INSERT INTO bank.subbranch (name, city, fund) VALUES ('龙岗支行', '合肥', 0.00);
-"""
+INSERT INTO bank.subbranch (name, city, fund) VALUES ('龙岗支行', '合肥', 0.00);"""
 
 faker_instance = Faker(locale='zh_CN')
 
@@ -39,13 +38,15 @@ conn = pymysql.connect(user=config.DB_USER, passwd=config.DB_PASSWORD, db=config
                        port=config.DB_PORT)
 cursor = conn.cursor()
 # 清空数据表
-# cursor.execute('DELETE FROM subbranch;')
+cursor.execute('DELETE FROM subbranch;')
 cursor.execute('DELETE FROM employee;')
 cursor.execute('DELETE FROM department;')
 cursor.execute('DELETE FROM customer;')
 conn.commit()
 # 添加支行
-# cursor.execute(branch)
+for l in branch.split(';'):
+    if l:
+        cursor.execute(l)
 # conn.commit()
 # 提取所有支行信息
 cursor.execute('SELECT name, city FROM subbranch;')
