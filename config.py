@@ -6,8 +6,8 @@ Configure parameters here
 
 DB_HOST = "localhost"
 DB_PORT = 3306
-DB_USER = "root"
-DB_PASSWORD = "DB_PASSWORD"
+DB_USER = "YOUR_DB_ACCOUNT"
+DB_PASSWORD = "YOUR_DB_PASSWORD"
 DB_NAME = 'Bank'
 
 SQLALCHEMY_DATABASE_URI = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}?charset=utf8"
